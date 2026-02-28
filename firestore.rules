@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /gifts/{giftId} {
+      // Permite leitura para todos
+      allow read: if true;
+      
+      // Permite criar se o documento não existir (seed)
+      allow create: if true;
+      
+      // Permite atualizar campos específicos com validação
+      allow update: if (
+        // Caso 1: Marcar como comprado
+        (request.resource.data.purchased == true && 
+         resource.data.purchased == false &&
+         request.resource.data.pinHash != null &&
+         request.resource.data.purchasedAt != null) ||
+        
+        // Caso 2: Desmarcar (validação do PIN é feita no cliente, mas aqui garantimos que o pinHash é removido)
+        (request.resource.data.purchased == false && 
+         resource.data.purchased == true &&
+         request.resource.data.pinHash == null) ||
+         
+        // Caso 3: Atualizar metadados (title/image)
+        (request.resource.data.purchased == resource.data.purchased &&
+         (request.resource.data.title != resource.data.title || 
+          request.resource.data.image != resource.data.image))
+      );
+      
+      // Não permite deletar
+      allow delete: if false;
+    }
+  }
+}
